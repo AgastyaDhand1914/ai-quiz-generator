@@ -1,1 +1,16 @@
-  
+flask       #basically a web framework for python
+flask-cors  #to allow flask server to accpet requests from frontend
+
+
+langchain   #the usual stuff
+langchain-community
+langchain-core
+
+
+python-docx   #to read word doc
+PyPDF2       #to read pdf
+python-multipart    #enable file upload from frontend
+
+
+requests   #http requests
+python-dotenv   #loads env variables
