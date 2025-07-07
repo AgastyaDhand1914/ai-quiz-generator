@@ -13,5 +13,5 @@ class TextProcessor:
         return cleaned_text.strip()
     
     def extract_content(self):
-        content = re.findall(r'<p>(.*?)</p>', self.raw_text, re.DOTALL)   #extracting content between <p> tags
+        content = re.findall(r'<p>(.*?)</p>', self.raw_text, re.DOTALL)   #extracting content between paragraph tags
         return content
