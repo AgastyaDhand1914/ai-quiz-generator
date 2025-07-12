@@ -4,6 +4,7 @@ import os
 from huggingface_hub import InferenceClient
 from langchain.prompts import PromptTemplate
 import dotenv
+
 dotenv.load_dotenv()
 
 class MCQGenerator:
