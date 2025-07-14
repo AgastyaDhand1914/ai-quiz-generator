@@ -19,17 +19,19 @@ class MCQGenerator:
                 You are a knowledgeable and intellectual professor. Design {number} multiple choice
                 questions based on the following context:
                 {context}
-                The response should be a JSON object with the following format:
+                The response should be a JSON object with the following format. Respond ONLY with a valid JSON object, using double quotes for all keys and string values.
+
+                Format is as follows:
 
                 {{
-                    'questions' : {{
+                    "questions" : {{
                         "1" : {{
-                            "question" : "What is the capital of France?",
+                            "question" : "(body of the question)",
                             "options" : {{
-                                "A" : "Paris",
-                                "B" : "London",
-                                "C" : "Berlin",
-                                "D" : "Madrid"
+                                "A" : "(content of option A)",
+                                "B" : "(content of option B)",
+                                "C" : "(content of option C)",
+                                "D" : "(content of option D)"
                             }},
                             "answer" : "A"
                         }}
@@ -42,7 +44,7 @@ class MCQGenerator:
         formatted_prompt = self.prompt_template.format(number=number, context=context)
         
         completion = self.client.chat.completions.create(
-                    model="mistralai/Mistral-7B-Instruct-v0.3",
+                    model="deepseek-ai/DeepSeek-R1-0528",
                     messages=[
                         {
                             "role": "user",

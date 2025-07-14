@@ -1,0 +1,193 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+import os
+import json
+import re
+import tempfile
+from file_extractor import FileExtractor
+from text_processing import TextProcessor
+from mcq_generator import MCQGenerator
+
+
+app = Flask(__name__)
+CORS(app)    #enable CORS for all routes
+
+#configuration
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024    #10MB max file size
+app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()    #use system temp directory
+
+
+ALLOWED_EXTENSIONS = {'pdf', 'docx'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'message': 'MCQ Generator API is running'
+    })
+
+@app.route('/api/supported-formats', methods=['GET'])
+def get_supported_formats():
+    return jsonify({
+        'formats': list(ALLOWED_EXTENSIONS),
+        'max_file_size': '10MB'
+    })
+
+@app.route('/api/generate-mcq', methods=['POST'])
+def generate_mcq():
+    try:
+        #if file is not present in request
+        if 'file' not in request.files:
+            return jsonify({
+                'error': 'No file provided',
+                'message': 'Please upload a file'
+            }), 400
+        
+        file = request.files['file']
+        
+        #if file not selected
+        if file.filename == '':
+            return jsonify({
+                'error': 'No file selected',
+                'message': 'Please select a file to upload'
+            }), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({
+                'error': 'Invalid file type',
+                'message': f'Supported formats: {", ".join(ALLOWED_EXTENSIONS)}'
+            }), 400
+
+        num_questions = request.form.get('num_questions', 5)
+        
+        try:
+            num_questions = int(num_questions)
+            if num_questions < 1 or num_questions > 30:
+                return jsonify({
+                    'error': 'Invalid number of questions',
+                    'message': 'Number of questions must be between 1 and 30'
+                }), 400
+        except ValueError:
+            return jsonify({
+                'error': 'Invalid number of questions',
+                'message': 'Number of questions must be a valid integer'
+            }), 400
+        
+        filename = secure_filename(file.filename) if file.filename else 'uploaded_file'
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        file.save(file_path)    #save uploaded file
+        
+        try:
+            file_extractor = FileExtractor(file_path)     #extractinf text from file
+            raw_text = file_extractor.extract_from_file()
+            
+            if not raw_text or raw_text.strip() == '':
+                return jsonify({
+                    'error': 'Empty file',
+                    'message': 'The uploaded file appears to be empty or could not be processed'
+                }), 400
+            
+            text_processor = TextProcessor(raw_text)     #cleaning text
+            cleaned_text = text_processor.clean_text()
+            
+            if not cleaned_text or cleaned_text.strip() == '':
+                return jsonify({
+                    'error': 'No valid content',
+                    'message': 'The file contains no processable text content'
+                }), 400
+            
+            mcq_generator = MCQGenerator()
+            mcq_response = mcq_generator.generate_mcq(num_questions, cleaned_text)     #generating mcqs
+            json_match = re.search(r"\{.*\}", mcq_response, re.DOTALL) if mcq_response else None
+            mcq_json_string = json_match.group(0) if json_match else None
+            
+            try:
+                if mcq_json_string:
+                    mcq_data = json.loads(mcq_json_string)     #parsing json response
+                    mcqs = mcq_data.get('questions', {})
+                else:
+                    return jsonify({
+                        'error': 'MCQ generation failed',
+                        'message': 'No valid response from thegenerator'
+                    }), 500
+            except json.JSONDecodeError:
+                return jsonify({
+                    'error': 'Quiz Generator failed',
+                    'message': 'Failed to generate valid format of questions',
+                    'response': mcq_json_string
+                }), 500
+            
+            return jsonify({
+                'success': True,
+                'mcqs': mcqs,
+                'total_questions': len(mcqs),
+                'filename': filename
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'error': 'File processing error',
+                'message': f'Error processing file: {str(e)}'
+            }), 500
+        
+        finally:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)     #removing the temporary file
+            except:
+                pass  #ignoring cleanup errors
+    
+    except Exception as e:
+        return jsonify({
+            'error': 'Server error',
+            'message': f'An unexpected error occurred: {str(e)}'
+        }), 500
+
+@app.route('/api/test', methods=['GET'])
+def test_endpoint():
+    return jsonify({
+        'message': 'MCQ Generator API is working!',
+        'endpoints': {
+            'health': '/api/health',
+            'supported_formats': '/api/supported-formats',
+            'generate_mcq': '/api/generate-mcq (POST)',
+            'test': '/api/test'
+        }
+    })
+
+@app.errorhandler(413)
+def too_large(error):
+    return jsonify({
+        'error': 'File too large',
+        'message': 'File size exceeds the maximum limit of 10MB'
+    }), 413
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'error': 'Endpoint not found',
+        'message': 'The requested endpoint does not exist'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'An unexpected error occurred on the server'
+    }), 500
+
+if __name__ == '__main__':
+    print("Starting Quiz Generator API")
+    print("Available endpoints:")
+    print("- GET  /api/health")
+    print("- GET  /api/supported-formats")
+    print("- POST /api/generate-mcq")
+    print("- GET  /api/test")
+    print("\nServer will run on http://localhost:5000")
+    app.run(debug=True, host='0.0.0.0', port=5000)
