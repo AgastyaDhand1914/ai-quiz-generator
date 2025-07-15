@@ -161,6 +161,158 @@ def test_endpoint():
         }
     })
 
+#endpoint to test file upload functionality
+@app.route('/api/file-upload-test', methods=['POST'])
+def file_upload_test():
+    try:
+        if 'file' not in request.files:
+            return jsonify({
+                'error': 'No file provided',
+                'message': 'Please upload a file'
+            }), 400
+        
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({
+                'error': 'No file selected',
+                'message': 'Please select a file to upload'
+            }), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({
+                'error': 'Invalid file type',
+                'message': f'Supported formats: {", ".join(ALLOWED_EXTENSIONS)}'
+            }), 400
+
+        num_questions = request.form.get('num_questions', 5)
+        
+        try:
+            num_questions = int(num_questions)
+            if num_questions < 1 or num_questions > 30:
+                return jsonify({
+                    'error': 'Invalid number of questions',
+                    'message': 'Number of questions must be between 1 and 30'
+                }), 400
+        except ValueError:
+            return jsonify({
+                'error': 'Invalid number of questions',
+                'message': 'Number of questions must be a valid integer'
+            }), 400
+        
+        filename = secure_filename(file.filename) if file.filename else 'uploaded_file'
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path) 
+        
+        try:
+            file_extractor = FileExtractor(file_path)   
+            raw_text = file_extractor.extract_from_file()
+            
+            if not raw_text or raw_text.strip() == '':
+                return jsonify({
+                    'error': 'Empty file',
+                    'message': 'The uploaded file appears to be empty or could not be processed'
+                }), 400
+            
+            text_processor = TextProcessor(raw_text)  
+            cleaned_text = text_processor.clean_text()
+            
+            if not cleaned_text or cleaned_text.strip() == '':
+                return jsonify({
+                    'error': 'No valid content',
+                    'message': 'The file contains no processable text content'
+                }), 400
+            else:
+                return jsonify({
+                    'filename': filename,
+                    'extracted_content': cleaned_text.strip()
+                })
+        except Exception as e:
+            return jsonify({
+                'error': 'File processing error',
+                'message': f'Error processing file: {str(e)}'
+            }), 500
+        finally:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path) 
+            except:
+                pass 
+    except Exception as e:
+        return jsonify({
+            'error': 'Server error',
+            'message': f'An unexpected error occurred: {str(e)}'
+        }), 500
+
+
+#endpoint for verifying posting the JSON response
+@app.route('/api/test-json-response', methods=['POST'])
+def test_json_response():
+    try:
+        response = {
+          "1": {
+              "question": "Which planet is known as the Red Planet?",
+              "options": {
+                  "A": "Mars",
+                  "B": "Jupiter",
+                  "C": "Venus",
+                  "D": "Saturn"
+              },
+              "answer": "A"
+          },
+          "2": {
+              "question": "What is the chemical symbol for water?",
+              "options": {
+                  "A": "O2",
+                  "B": "H2O",
+                  "C": "CO2",
+                  "D": "NaCl"
+              },
+              "answer": "B"
+          },
+          "3": {
+              "question": "Who was the first President of the United States?",
+              "options": {
+                  "A": "Abraham Lincoln",
+                  "B": "George Washington",
+                  "C": "Thomas Jefferson",
+                  "D": "John Adams"
+              },
+              "answer": "B"
+          },
+          "4": {
+              "question": "Which gas do plants absorb from the atmosphere?",
+              "options": {
+                  "A": "Oxygen",
+                  "B": "Nitrogen",
+                  "C": "Carbon Dioxide",
+                  "D": "Hydrogen"
+              },
+              "answer": "C"
+          },
+          "5": {
+              "question": "What is the largest mammal in the world?",
+              "options": {
+                  "A": "Elephant",
+                  "B": "Giraffe",
+                  "C": "Blue Whale",
+                  "D": "Hippopotamus"
+              },
+              "answer": "C"
+          }
+      }
+        return jsonify({
+            'success': True,
+            'mcqs': response,
+            'total_questions': len(response)
+      })
+    except Exception as e:
+        return jsonify({
+            'error': 'Error occured in retriveing JSON response',
+            'message': f'Error: {str(e)}'
+        }), 500
+
+
 @app.errorhandler(413)
 def too_large(error):
     return jsonify({
@@ -183,11 +335,8 @@ def internal_error(error):
     }), 500
 
 if __name__ == '__main__':
-    print("Starting Quiz Generator API")
-    print("Available endpoints:")
+    print("Commenced. Available endpoints:")
     print("- GET  /api/health")
     print("- GET  /api/supported-formats")
     print("- POST /api/generate-mcq")
-    print("- GET  /api/test")
-    print("\nServer will run on http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)

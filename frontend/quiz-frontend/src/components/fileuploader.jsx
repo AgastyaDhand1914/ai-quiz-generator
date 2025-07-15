@@ -5,6 +5,7 @@ const FileUpload = () => {
   const [status, setStatus] = useState('');
   const [mcqs, setMcqs] = useState(null);
   const [numQuestions, setNumQuestions] = useState(5);
+  const [text, setText] = useState('');
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -25,78 +26,38 @@ const FileUpload = () => {
     formData.append('num_questions', numQuestions);
     setStatus('Uploading...');
     setMcqs(null);
-    // try {
-      // const response = await fetch('http://localhost:5000/api/generate-mcq', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // if (response.ok) {
-        // const data = await response.json();
+    setText('');
+    setNumQuestions(5);
+    try {
+      const response = await fetch('http://localhost:5000/api/file-upload-test', {
+        method: 'POST',
+        body: formData,
+      });
+      if (response.ok) {
+        const data = await response.json();
         setStatus('File uploaded and MCQs generated!');
+        setText(data.extracted_content);
+      } 
+    } 
+    catch (error) {
+      setStatus(`Error uploading file: ${error.message}`);
+    }
 
-        const trial_mcqs = {
-          "1": {
-              "question": "Which planet is known as the Red Planet?",
-              "options": {
-                  "A": "Mars",
-                  "B": "Jupiter",
-                  "C": "Venus",
-                  "D": "Saturn"
-              },
-              "answer": "A"
-          },
-          "2": {
-              "question": "What is the chemical symbol for water?",
-              "options": {
-                  "A": "O2",
-                  "B": "H2O",
-                  "C": "CO2",
-                  "D": "NaCl"
-              },
-              "answer": "B"
-          },
-          "3": {
-              "question": "Who was the first President of the United States?",
-              "options": {
-                  "A": "Abraham Lincoln",
-                  "B": "George Washington",
-                  "C": "Thomas Jefferson",
-                  "D": "John Adams"
-              },
-              "answer": "B"
-          },
-          "4": {
-              "question": "Which gas do plants absorb from the atmosphere?",
-              "options": {
-                  "A": "Oxygen",
-                  "B": "Nitrogen",
-                  "C": "Carbon Dioxide",
-                  "D": "Hydrogen"
-              },
-              "answer": "C"
-          },
-          "5": {
-              "question": "What is the largest mammal in the world?",
-              "options": {
-                  "A": "Elephant",
-                  "B": "Giraffe",
-                  "C": "Blue Whale",
-                  "D": "Hippopotamus"
-              },
-              "answer": "C"
-          }
+    try {
+      const trial_data = await fetch('http://localhost:5000/api/test-json-response', {
+        method: 'POST',
+      });
+
+      if (trial_data.ok) {
+        console.log('trial_data is ok.')
+        const trial_mcqs = await trial_data.json();
+        setMcqs(trial_mcqs.mcqs);
+        setStatus('File succesfully uploaded. JSON response retrieved.');
       }
-
-        
-        setMcqs(trial_mcqs);
-      // } else {
-      //   const errorData = await response.json();
-      //   setStatus(errorData.message || 'Upload failed.');
-      // }
-    // } catch (error) {
-    //   setStatus('Error uploading file.');
-    // }
-  
+    }
+    catch (error) {
+      setStatus(`File succesfully uploaded. Error retrieving JSON response: ${error.message}`);
+    }
 };
 
   return (
@@ -114,24 +75,28 @@ const FileUpload = () => {
         <button type="submit">Upload</button>
       </form>
       {status && <p>{status}</p>}
-      {mcqs && (
-        <div>
-          <h3>Generated MCQs:</h3>
-          <ol>
-            {Object.entries(mcqs).map(([key, q]) => (
-              <li key={key}>
-                <strong>{q.question}</strong>
-                <ul>
-                  {Object.entries(q.options).map(([opt, text]) => (
-                    <li key={opt}><b>{opt}:</b> {text}</li>
-                  ))}
-                </ul>
-                <em>Answer: {q.answer}</em>
+      {text && <p>{text}</p>}
+      {mcqs &&
+      <div>
+        <h3>Generated MCQs:</h3>
+        <ol>
+          {Object.entries(mcqs).map(([key, q]) => (
+            <li key={key}>
+              {q.question}
+              <ul>
+                {Object.entries(q.options).map(([qnum, content]) => (
+                  <li key={qnum}>
+                    <b>{qnum}:</b> {content}
+                  </li>
+                ))}
+              </ul>
+              <em>Answer: {q.answer}</em>
               </li>
-            ))}
-          </ol>
-        </div>
-      )}
+          ))}
+        </ol>
+      </div>
+      }
+      
     </div>
   );
 };
