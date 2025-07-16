@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import Quiz from './quiz';
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('');
+  const [MCQstatus, setMCQStatus] = useState('');
+  const [filestatus, setFileStatus] = useState('');
   const [mcqs, setMcqs] = useState(null);
   const [numQuestions, setNumQuestions] = useState(5);
   const [text, setText] = useState('');
+  const [showQuiz, setShowQuiz] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -18,13 +21,13 @@ const FileUpload = () => {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) {
-      setStatus('Please select a file first.');
+      setFileStatus('Please select a file first.');
       return;
     }
     const formData = new FormData();
     formData.append('file', file);
     formData.append('num_questions', numQuestions);
-    setStatus('Uploading...');
+    setFileStatus('Uploading...');
     setMcqs(null);
     setText('');
     setNumQuestions(5);
@@ -35,12 +38,22 @@ const FileUpload = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setStatus('File uploaded and MCQs generated!');
-        setText(data.extracted_content);
-      } 
+        
+        if (data.success) {
+          setText(data.extracted_content);
+          console.log(text)
+          setFileStatus('File uploaded!');
+        }
+        else {
+          setFileStatus(data.message);
+        }
+      }
+      else {
+        setFileStatus('Error uploading file.');
+      }
     } 
     catch (error) {
-      setStatus(`Error uploading file: ${error.message}`);
+      setFileStatus(`Error uploading file: ${error.message}`);
     }
 
     try {
@@ -52,49 +65,46 @@ const FileUpload = () => {
         console.log('trial_data is ok.')
         const trial_mcqs = await trial_data.json();
         setMcqs(trial_mcqs.mcqs);
-        setStatus('File succesfully uploaded. JSON response retrieved.');
+        setMCQStatus('MCQs generated!');
       }
     }
     catch (error) {
-      setStatus(`File succesfully uploaded. Error retrieving JSON response: ${error.message}`);
+      setMCQStatus(`Error retrieving JSON response: ${error.message}`);
     }
-};
+
+    setShowQuiz(true);
+  };
+
+  const handleHideQuiz = () => {
+    setFileStatus('');
+    setMCQStatus('');
+    setMcqs(null);
+    setNumQuestions(5);
+    setText('');
+    setFile(null);
+    setShowQuiz(false);
+  };
 
   return (
     <div>
-      <form onSubmit={handleUpload}>
+
+      {!showQuiz &&<form onSubmit={handleUpload}>
         <input type="file" onChange={handleFileChange} />
-        <input
-          type="number"
-          min="1"
-          max="30"
-          value={numQuestions}
-          onChange={handleNumQuestionsChange}
-          placeholder="Number of questions"
-        />
+        <input type="number" min="1" max="30" value={numQuestions} onChange={handleNumQuestionsChange} 
+        placeholder="Number of questions"/>
         <button type="submit">Upload</button>
-      </form>
-      {status && <p>{status}</p>}
-      {text && <p>{text}</p>}
-      {mcqs &&
-      <div>
-        <h3>Generated MCQs:</h3>
-        <ol>
-          {Object.entries(mcqs).map(([key, q]) => (
-            <li key={key}>
-              {q.question}
-              <ul>
-                {Object.entries(q.options).map(([qnum, content]) => (
-                  <li key={qnum}>
-                    <b>{qnum}:</b> {content}
-                  </li>
-                ))}
-              </ul>
-              <em>Answer: {q.answer}</em>
-              </li>
-          ))}
-        </ol>
-      </div>
+      </form> 
+      }
+
+      {filestatus && <p>{filestatus}</p>}
+      {MCQstatus && <p>{MCQstatus}</p>}
+
+      {mcqs && showQuiz &&
+        <Quiz questions={mcqs}/>
+      }
+
+      {showQuiz &&
+        <button onClick={handleHideQuiz}>Hide Quiz</button>
       }
       
     </div>

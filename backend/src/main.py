@@ -167,6 +167,7 @@ def file_upload_test():
     try:
         if 'file' not in request.files:
             return jsonify({
+                'success' : False,
                 'error': 'No file provided',
                 'message': 'Please upload a file'
             }), 400
@@ -175,12 +176,14 @@ def file_upload_test():
 
         if file.filename == '':
             return jsonify({
+                'success' : False,
                 'error': 'No file selected',
                 'message': 'Please select a file to upload'
             }), 400
         
         if not allowed_file(file.filename):
             return jsonify({
+                'success' : False,
                 'error': 'Invalid file type',
                 'message': f'Supported formats: {", ".join(ALLOWED_EXTENSIONS)}'
             }), 400
@@ -191,11 +194,13 @@ def file_upload_test():
             num_questions = int(num_questions)
             if num_questions < 1 or num_questions > 30:
                 return jsonify({
+                    'success' : False,
                     'error': 'Invalid number of questions',
                     'message': 'Number of questions must be between 1 and 30'
                 }), 400
         except ValueError:
             return jsonify({
+                'success' : False,
                 'error': 'Invalid number of questions',
                 'message': 'Number of questions must be a valid integer'
             }), 400
@@ -210,6 +215,7 @@ def file_upload_test():
             
             if not raw_text or raw_text.strip() == '':
                 return jsonify({
+                    'success' : False,
                     'error': 'Empty file',
                     'message': 'The uploaded file appears to be empty or could not be processed'
                 }), 400
@@ -219,16 +225,19 @@ def file_upload_test():
             
             if not cleaned_text or cleaned_text.strip() == '':
                 return jsonify({
+                    'success' : False,
                     'error': 'No valid content',
                     'message': 'The file contains no processable text content'
                 }), 400
             else:
                 return jsonify({
+                    'success' : True,
                     'filename': filename,
                     'extracted_content': cleaned_text.strip()
                 })
         except Exception as e:
             return jsonify({
+                'success' : False,
                 'error': 'File processing error',
                 'message': f'Error processing file: {str(e)}'
             }), 500
@@ -240,6 +249,7 @@ def file_upload_test():
                 pass 
     except Exception as e:
         return jsonify({
+            'success' : False,
             'error': 'Server error',
             'message': f'An unexpected error occurred: {str(e)}'
         }), 500
