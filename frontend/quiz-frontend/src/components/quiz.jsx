@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Question from './question';
-import axios from 'axios';
 
 const Quiz = ({ questions }) => {
   const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -67,17 +66,22 @@ const Quiz = ({ questions }) => {
             ))
         }
         {!submitted && (
-          <button onClick={handleSubmit} disabled={Object.keys(selectedAnswers).length !== Object.keys(questions).length}>
+          <button
+            onClick={handleSubmit}
+            disabled={Object.keys(selectedAnswers).length !== Object.keys(questions).length}
+            className="quiz-action-btn"
+            style={{cursor: Object.keys(selectedAnswers).length !== Object.keys(questions).length ? 'not-allowed' : 'pointer'}}
+          >
             Submit
           </button>
         )}
         {submitted && (
-          <div>
-            <h3>Your Score: {score} / {Object.keys(questions).length}</h3>
+          <div className="score-display">
+            You Scored: {score} / {Object.keys(questions).length}
           </div>
         )}
         {submitted && (
-          <button onClick={handleDownloadCSV}>Download as CSV</button>
+          <button onClick={handleDownloadCSV} className="quiz-action-btn">Download as CSV</button>
         )}
     </>
   )

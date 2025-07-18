@@ -32,9 +32,11 @@ class FileExtractor:
             return self.extract_pdf_from_path(file_path)
         elif file_path.lower().endswith('.docx'):    #docx file
             return self.extract_docx_from_path(file_path)
+        elif file_path.lower().endswith('.txt'):    #txt file
+            return self.extract_txt_from_path(file_path)
         else:
             self.acceptable = False
-            raise ValueError("Unsupported file type, only '.pdf' and '.docx' are supported currently.")
+            raise ValueError("Unsupported file type, only '.pdf', '.docx', and '.txt' are supported currently.")
 
     def extract_from_upload_file(self, upload_file):
         
@@ -42,9 +44,11 @@ class FileExtractor:
             return self.extract_pdf_from_upload(upload_file)
         elif upload_file.filename.lower().endswith('.docx'):    #docx file
             return self.extract_docx_from_upload(upload_file)
+        elif upload_file.filename.lower().endswith('.txt'):    #txt file
+            return self.extract_txt_from_upload(upload_file)
         else:
             self.acceptable = False
-            raise ValueError("Unsupported file type, only '.pdf' and '.docx' are supported currently.")
+            raise ValueError("Unsupported file type, only '.pdf', '.docx', and '.txt' are supported currently.")
 
     def extract_pdf_from_upload(self, upload_file):
         try:
@@ -101,6 +105,24 @@ class FileExtractor:
             self.acceptable = False
             raise ValueError(f"Error extracting text from docx: {e}")
         
+        return self.text.strip()
+
+    def extract_txt_from_path(self, file_path: str):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                self.text = file.read()
+        except Exception as e:
+            self.acceptable = False
+            raise ValueError(f"Error extracting text from txt: {e}")
+        return self.text.strip()
+
+    def extract_txt_from_upload(self, upload_file):
+        try:
+            content = upload_file.file.read()
+            self.text = content.decode('utf-8')
+        except Exception as e:
+            self.acceptable = False
+            raise ValueError(f"Error extracting text from txt: {e}")
         return self.text.strip()
 
 

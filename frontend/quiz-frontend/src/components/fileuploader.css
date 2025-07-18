@@ -1,0 +1,110 @@
+/* Container for the file uploader */
+.fileupload-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.fileupload-form {
+  background: #1a1a1a;
+  padding: 2.5rem 2rem;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  min-width: 340px;
+  max-width: 90vw;
+}
+
+.fileupload-label {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fileupload-input {
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  background: #242424;
+  color: #fff;
+  border: 1px solid #646cff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fileupload-button {
+  width: 100%;
+  font-size: 1.2rem;
+  padding: 0.9rem 0;
+  background: #646cff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.fileupload-button:hover {
+  background: #535bf2;
+}
+
+.fileupload-status, .quesupload-status {
+  color: #fff;
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: bold;
+  margin-bottom: 0;
+}
+
+.quesupload-status {
+  margin-top: 10px;
+  margin-bottom: 3rem;
+  position: relative;
+}
+
+.quesupload-status::after {
+  content: '';
+  display: block;
+  margin: 0 auto;
+  margin-top: 0.5rem;
+  height: 3px;
+  width: 100px;
+  background: linear-gradient(90deg, #646cff 0%, #62659e 100%);
+  border-radius: 2px;
+  transition: width 0.75s cubic-bezier(0.4,0,0.2,1);
+}
+
+.quesupload-status:hover::after {
+  width: 700px;
+  background: linear-gradient(90deg, #535bf2 0%, #585b92 100%);
+}
+
+.fileupload-hide-btn {
+  margin-top: 1rem;
+  background: #646cff;
+  color: #fff;
+  font-size: 1.1rem;
+  padding: 0.7rem 2.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.fileupload-hide-btn:hover {
+  background: #535bf2;
+} 
