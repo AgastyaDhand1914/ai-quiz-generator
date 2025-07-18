@@ -1,7 +1,7 @@
 import React from 'react'
 import Option from './option'
 
-const Question = ({ question, id, qKey, selected, onSelect, disabled }) => {
+const Question = ({ question, id, qKey, selected, correctAnswer, onSelect, disabled, submitted }) => {
   return (
     <>
         <h3>{id}: {question.question}</h3>
@@ -12,6 +12,8 @@ const Question = ({ question, id, qKey, selected, onSelect, disabled }) => {
                   selected={selected === option}
                   disabled={disabled}
                   onClick={() => onSelect(qKey, option)}
+                  isCorrect={option === correctAnswer}
+                  submitted={submitted}
                 >
                   {option}. {content}
                 </Option>

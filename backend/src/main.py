@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
@@ -8,6 +8,8 @@ import tempfile
 from file_extractor import FileExtractor
 from text_processing import TextProcessor
 from mcq_generator import MCQGenerator
+from csv_downloader import CSVDownloader
+import io
 
 
 app = Flask(__name__)
@@ -106,6 +108,7 @@ def generate_mcq():
             mcq_response = mcq_generator.generate_mcq(num_questions, cleaned_text)     #generating mcqs
             json_match = re.search(r"\{.*\}", mcq_response, re.DOTALL) if mcq_response else None
             mcq_json_string = json_match.group(0) if json_match else None
+            mcqs = {}
             
             try:
                 if mcq_json_string:
@@ -152,7 +155,7 @@ def generate_mcq():
 @app.route('/api/test', methods=['GET'])
 def test_endpoint():
     return jsonify({
-        'message': 'MCQ Generator API is working!',
+        'message': 'API is working!',
         'endpoints': {
             'health': '/api/health',
             'supported_formats': '/api/supported-formats',
@@ -186,23 +189,6 @@ def file_upload_test():
                 'success' : False,
                 'error': 'Invalid file type',
                 'message': f'Supported formats: {", ".join(ALLOWED_EXTENSIONS)}'
-            }), 400
-
-        num_questions = request.form.get('num_questions', 5)
-        
-        try:
-            num_questions = int(num_questions)
-            if num_questions < 1 or num_questions > 30:
-                return jsonify({
-                    'success' : False,
-                    'error': 'Invalid number of questions',
-                    'message': 'Number of questions must be between 1 and 30'
-                }), 400
-        except ValueError:
-            return jsonify({
-                'success' : False,
-                'error': 'Invalid number of questions',
-                'message': 'Number of questions must be a valid integer'
             }), 400
         
         filename = secure_filename(file.filename) if file.filename else 'uploaded_file'
@@ -259,67 +245,92 @@ def file_upload_test():
 @app.route('/api/test-json-response', methods=['POST'])
 def test_json_response():
     try:
-        response = {
-          "1": {
-              "question": "Which planet is known as the Red Planet?",
-              "options": {
-                  "A": "Mars",
-                  "B": "Jupiter",
-                  "C": "Venus",
-                  "D": "Saturn"
-              },
-              "answer": "A"
-          },
-          "2": {
-              "question": "What is the chemical symbol for water?",
-              "options": {
-                  "A": "O2",
-                  "B": "H2O",
-                  "C": "CO2",
-                  "D": "NaCl"
-              },
-              "answer": "B"
-          },
-          "3": {
-              "question": "Who was the first President of the United States?",
-              "options": {
-                  "A": "Abraham Lincoln",
-                  "B": "George Washington",
-                  "C": "Thomas Jefferson",
-                  "D": "John Adams"
-              },
-              "answer": "B"
-          },
-          "4": {
-              "question": "Which gas do plants absorb from the atmosphere?",
-              "options": {
-                  "A": "Oxygen",
-                  "B": "Nitrogen",
-                  "C": "Carbon Dioxide",
-                  "D": "Hydrogen"
-              },
-              "answer": "C"
-          },
-          "5": {
-              "question": "What is the largest mammal in the world?",
-              "options": {
-                  "A": "Elephant",
-                  "B": "Giraffe",
-                  "C": "Blue Whale",
-                  "D": "Hippopotamus"
-              },
-              "answer": "C"
-          }
-      }
+        num_questions = request.form.get('num_questions', 5)
+        
+        try:
+            num_questions = int(num_questions)
+            if num_questions < 1 or num_questions > 30:
+                return jsonify({
+                    'success' : False,
+                    'error': 'Invalid number of questions',
+                    'message': 'Number of questions must be between 1 and 30'
+                }), 400
+        except ValueError:
+            return jsonify({
+                'success' : False,
+                'error': 'Invalid number of questions',
+                'message': 'Number of questions must be a valid integer'
+            }), 400
+
+        cleaned_text = request.form.get('extracted_content', '')
+
+        mcq_generator = MCQGenerator()
+        mcq_response = mcq_generator.generate_mcq(num_questions, cleaned_text)     #generating mcqs
+        json_match = re.search(r"\{.*\}", mcq_response, re.DOTALL) if mcq_response else None
+        mcq_json_string = json_match.group(0) if json_match else None
+        mcqs = {}
+
+            
+        try:
+            if mcq_json_string:
+                mcq_data = json.loads(mcq_json_string)     #parsing json response
+                mcqs = mcq_data.get('questions', {})
+            else:
+                return jsonify({
+                    'error': 'MCQ generation failed',
+                    'message': 'No valid response from thegenerator'
+                }), 500
+        except json.JSONDecodeError:
+            return jsonify({
+                'error': 'Quiz Generator failed',
+                'message': 'Failed to generate valid format of questions',
+                'response': mcq_json_string
+            }), 500
+        
         return jsonify({
             'success': True,
-            'mcqs': response,
-            'total_questions': len(response)
-      })
+            'mcqs': mcqs,
+            'total_questions': len(mcqs)
+        })
+
     except Exception as e:
         return jsonify({
             'error': 'Error occured in retriveing JSON response',
             'message': f'Error: {str(e)}'
+        }), 500
+
+
+@app.route('/api/csv-download', methods=['POST'])
+def download_quiz_csv():
+    try:
+        # Parse the JSON body sent from the frontend
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'error': 'No questions provided',
+                'message': 'Please provide questions in the request body'
+            }), 400
+
+        # Generate the CSV string using your CSVDownloader class
+        csv_string = CSVDownloader.questions_to_csv(data)
+
+        if not csv_string:
+            return jsonify({
+                'error': 'CSV generation failed',
+                'message': 'No CSV data to download'
+            }), 500
+
+        # Return the CSV as a downloadable file
+        return send_file(
+            io.BytesIO(csv_string.encode()),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='quiz.csv'
+        )
+    except Exception as e:
+        return jsonify({
+            'error': 'Server error',
+            'message': f'An unexpected error occurred: {str(e)}'
         }), 500
 
 

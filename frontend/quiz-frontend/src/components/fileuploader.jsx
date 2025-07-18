@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Quiz from './quiz';
 
 const FileUpload = () => {
@@ -7,8 +7,8 @@ const FileUpload = () => {
   const [filestatus, setFileStatus] = useState('');
   const [mcqs, setMcqs] = useState(null);
   const [numQuestions, setNumQuestions] = useState(5);
-  const [text, setText] = useState('');
   const [showQuiz, setShowQuiz] = useState(false);
+
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -24,25 +24,27 @@ const FileUpload = () => {
       setFileStatus('Please select a file first.');
       return;
     }
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('num_questions', numQuestions);
-    setFileStatus('Uploading...');
+    const fileData = new FormData();
+    const quizData = new FormData();
+
+    fileData.append('file', file);
+    quizData.append('num_questions', numQuestions);
+
+    setFileStatus('Uploading File...');
     setMcqs(null);
-    setText('');
     setNumQuestions(5);
     try {
       const response = await fetch('http://localhost:5000/api/file-upload-test', {
         method: 'POST',
-        body: formData,
+        body: fileData,
       });
       if (response.ok) {
         const data = await response.json();
         
         if (data.success) {
-          setText(data.extracted_content);
-          console.log(text)
-          setFileStatus('File uploaded!');
+          quizData.append('extracted_content', data.extracted_content);
+          setFileStatus('File successfully uploaded!');
+          setMCQStatus('Generating  Questions for you...');
         }
         else {
           setFileStatus(data.message);
@@ -59,13 +61,14 @@ const FileUpload = () => {
     try {
       const trial_data = await fetch('http://localhost:5000/api/test-json-response', {
         method: 'POST',
+        body: quizData,
       });
 
       if (trial_data.ok) {
-        console.log('trial_data is ok.')
         const trial_mcqs = await trial_data.json();
         setMcqs(trial_mcqs.mcqs);
-        setMCQStatus('MCQs generated!');
+        setMCQStatus('Quiz generated!');
+        setFileStatus('');
       }
     }
     catch (error) {
@@ -80,7 +83,6 @@ const FileUpload = () => {
     setMCQStatus('');
     setMcqs(null);
     setNumQuestions(5);
-    setText('');
     setFile(null);
     setShowQuiz(false);
   };
