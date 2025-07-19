@@ -9,7 +9,6 @@ langchain-core
 
 python-docx   #to read word doc
 PyPDF2       #to read pdf
-python-multipart    #enable file upload from frontend
 
 
 requests   #http requests
